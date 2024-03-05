@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a2525',
+    color: '#004AAD',
     marginBottom: 16,
   },
   inputContainer: {
