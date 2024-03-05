@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   StyleSheet,
@@ -7,6 +8,8 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { IconButton } from 'react-native-paper';
 
@@ -15,94 +18,82 @@ const HomePage = () => {
   const [text, setText] = useState('');
   const [editIndex, setEditIndex] = useState(-1);
   const [visibleIndex, setVisibleIndex] = useState(null);
-
-  const [searchText, setSearchText] = useState('');
+  const [folders, setFolders] = useState([]);
+  const [folderName, setFolderName] = useState('');
   const [isTaskInputVisible, setTaskInputVisible] = useState(true);
-
+  const [isFolderModalVisible, setFolderModalVisible] = useState(false);
+  const [selectedFolderIndex, setSelectedFolderIndex] = useState(null); // New state variable
+  const [folderInputs, setFolderInputs] = useState({});
+  const [editTaskText, setEditTaskText] = useState('');
+  const [editFolderName, setEditFolderName] = useState('');
+  const [editTaskModalVisible, setEditTaskModalVisible] = useState(false);
+  const [editFolderModalVisible, setEditFolderModalVisible] = useState(false);
 
   const addTask = () => {
-    if (text) {
+    if (folderInputs[selectedFolderIndex]) {
       const timestamp = new Date().toLocaleString();
-      const taskObject = { text, timestamp };
-
-      if (editIndex !== -1) {
-        const updatedTasks = [...tasks];
-        updatedTasks[editIndex] = taskObject;
-        setTasks(updatedTasks);
-        setEditIndex(-1);
-      } else {
-        setTasks([...tasks, taskObject]);
-      }
-
-      setText('');
+      const taskObject = { text: folderInputs[selectedFolderIndex], timestamp };
+      const updatedFolders = [...folders];
+      updatedFolders[selectedFolderIndex].tasks.push(taskObject);
+      setFolders(updatedFolders);
+      setFolderInputs((prevInputs) => ({
+        ...prevInputs,
+        [selectedFolderIndex]: '', // Reset input text after adding task
+      }));
     }
   };
 
-  const editTask = (index) => {
-    const taskToEdit = tasks[index];
-    setText(taskToEdit.text);
-    setEditIndex(index);
+  const addFolder = () => {
+    if (folderName) {
+      const folderObject = { name: folderName, tasks: [] };
+      setFolders([...folders, folderObject]);
+      setFolderName('');
+      setFolderModalVisible(false);
+    }
   };
 
-  const deleteTask = (index) => {
-    const updatedTasks = [...tasks];
-    updatedTasks.splice(index, 1);
-    setTasks(updatedTasks);
+  const handleEditTask = (index) => {
+    const taskToEdit = folders[selectedFolderIndex].tasks[index];
+    setEditTaskText(taskToEdit.text);
+    setEditIndex(index);
+    setEditTaskModalVisible(true);
+  };
+  const handleEditTaskSave = () => {
+    const updatedFolders = [...folders];
+    updatedFolders[selectedFolderIndex].tasks[editIndex].text = editTaskText;
+    setFolders(updatedFolders);
+    setEditTaskModalVisible(false);
+  };
+
+
+  const handleDeleteTask = (index) => {
+    const updatedFolders = [...folders];
+    updatedFolders[selectedFolderIndex].tasks.splice(index, 1);
+    setFolders(updatedFolders);
+  };
+
+  const handleEditFolder = (index) => {
+    const folderToEdit = folders[index];
+    setEditFolderName(folderToEdit.name);
+    setEditIndex(index);
+    setEditFolderModalVisible(true);
+  };
+
+  const handleEditFolderSave = () => {
+    const updatedFolders = [...folders];
+    updatedFolders[editIndex].name = editFolderName;
+    setFolders(updatedFolders);
+    setEditFolderModalVisible(false);
+  };
+
+  const handleDeleteFolder = (index) => {
+    const updatedFolders = [...folders];
+    updatedFolders.splice(index, 1);
+    setFolders(updatedFolders);
   };
 
   const openOptions = (index) => {
     setVisibleIndex(index === visibleIndex ? null : index);
-  };
-
-  const renderNotes = () => {
-    const filteredNotes = tasks.filter(
-      (task) =>
-        task.text?.toLowerCase().includes(searchText.toLowerCase())
-    );
-
-    const exactMatch = [];
-    const partialMatch = [];
-
-    filteredNotes.forEach((task) => {
-      if (task.text?.toLowerCase() === searchText.toLowerCase()) {
-        exactMatch.push(task);
-      } else {
-        partialMatch.push(task);
-      }
-    });
-
-    if (exactMatch.length > 0 || partialMatch.length > 0) {
-      return (
-        <View>
-          {exactMatch.length > 0 && (
-            <>
-              <Text style={styles.searchHeader}>Matching Result:</Text>
-              <FlatList
-                data={exactMatch}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => index.toString()}
-              />
-            </>
-          )}
-          {partialMatch.length > 0 && (
-            <>
-              <Text style={styles.searchHeader}>Results:</Text>
-              <FlatList
-                data={partialMatch}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => index.toString()}
-              />
-            </>
-          )}
-        </View>
-      );
-    }
-
-    return (
-      <View>
-        <Text>No matching tasks found.</Text>
-      </View>
-    );
   };
 
   const renderItem = ({ item, index }) => (
@@ -112,19 +103,11 @@ const HomePage = () => {
       <View style={styles.itemList}>
         {visibleIndex === index && (
           <View style={styles.taskButtons}>
-            <TouchableOpacity onPress={() => editTask(index)}>
-              <IconButton
-                icon="playlist-edit"
-                size={20}
-                onPress={() => editTask(index)}
-              />
+            <TouchableOpacity onPress={() => handleEditTask(index)}>
+              <IconButton icon="playlist-edit" size={20} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteTask(index)}>
-              <IconButton
-                icon="delete"
-                size={20}
-                onPress={() => deleteTask(index)}
-              />
+            <TouchableOpacity onPress={() => handleDeleteTask(index)}>
+              <IconButton icon="delete" size={20} />
             </TouchableOpacity>
           </View>
         )}
@@ -135,138 +118,180 @@ const HomePage = () => {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
+  const renderFolderItem = ({ item, index }) => (
+    <View style={styles.folder}>
+      <TouchableOpacity
+        onPress={() => {
+          setSelectedFolderIndex(index);
+          setTaskInputVisible(true);
+        }}
+      >
+        <Text style={styles.folderName}>{item.name}</Text>
+      </TouchableOpacity>
+
       <FlatList
-        data={[{}]} // Add a dummy item to make FlatList work as a ScrollView
-        renderItem={() => (
-          <View style={styles.content}>
-            <Text style={styles.title}>Good day!</Text>
-            <View style={styles.inputContainer}>
-              {isTaskInputVisible ? (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Write your day here..."
-                    value={text}
-                    onChangeText={(inputText) => setText(inputText)}
-                  />
-                  <TouchableOpacity
-                    onPress={addTask}
-                    style={styles.postButton}
-                  >
-                    <Text style={styles.toggleButtonText}>
-                      {editIndex !== -1 ? 'Modify' : 'Share'}
-                    </Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Search tasks..."
-                  value={searchText}
-                  onChangeText={(search) => setSearchText(search)}
-                />
-              )}
-              <TouchableOpacity
-                onPress={() => setTaskInputVisible(!isTaskInputVisible)}
-                style={styles.toggleButton}
-              >
-                <Text style={styles.toggleButtonText}>
-                  {isTaskInputVisible ? 'Search' : 'Memo'}
-                </Text>
+        data={item.tasks}
+        renderItem={({ item, index }) => (
+          <View style={styles.task}>
+            <Text style={styles.timestampText}>{item.timestamp}</Text>
+            <Text style={styles.taskText}>{item.text}</Text>
+            <View style={styles.itemList}>
+              <TouchableOpacity onPress={() => handleEditTask(index)}>
+                <IconButton icon="playlist-edit" size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteTask(index)}>
+                <IconButton icon="delete" size={20} />
               </TouchableOpacity>
             </View>
-            {renderNotes()}
           </View>
         )}
         keyExtractor={(item, index) => index.toString()}
       />
+      {isTaskInputVisible && selectedFolderIndex === index && (
+        <View>
+          <TextInput
+            style={styles.input}
+            placeholder="Share your day..."
+            value={folderInputs[index] || ''}
+            onChangeText={(inputText) =>
+              setFolderInputs((prevInputs) => ({
+                ...prevInputs,
+                [index]: inputText,
+              }))
+            }
+          />
+          <TouchableOpacity onPress={() => addTask(index)}>
+            <Text style={styles.postButton}>Share</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleEditFolder(index)}>
+            <IconButton icon="playlist-edit" size={20} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteFolder(index)}>
+            <IconButton icon="delete" size={20} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Memosphere</Text>
+        <TouchableOpacity
+          onPress={() => setFolderModalVisible(true)}
+          style={styles.createFolderButton}
+        >
+          <Text style={styles.createFolderButtonText}>Create Folder</Text>
+        </TouchableOpacity>
+        <FlatList
+          data={folders}
+          renderItem={renderFolderItem}
+          keyExtractor={(item, index) => index.toString()}
+        />
+        <FlatList
+          data={tasks}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+        />
+      </View>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isFolderModalVisible}
+        onRequestClose={() => {
+          setFolderModalVisible(!isFolderModalVisible);
+        }}
+      >
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Enter Folder Name:</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Folder Name"
+            value={folderName}
+            onChangeText={(text) => setFolderName(text)}
+          />
+          <Pressable style={styles.modalButton} onPress={addFolder}>
+            <Text style={styles.modalButtonText}>Create Folder</Text>
+          </Pressable>
+        </View>
+      </Modal>
+      {/* Edit Task Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editTaskModalVisible}
+        onRequestClose={() => setEditTaskModalVisible(false)}
+      >
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Edit Task:</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Edit Task"
+            value={editTaskText}
+            onChangeText={(text) => setEditTaskText(text)}
+          />
+          <Pressable style={styles.modalButton} onPress={() => setEditTaskModalVisible(false)}>
+            <Text style={styles.modalButtonText} onPress={handleEditTaskSave}>Save Task</Text>
+          </Pressable>
+        </View>
+      </Modal>
+      {/* Edit Folder Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editFolderModalVisible}
+        onRequestClose={() => setEditFolderModalVisible(false)}
+      >
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Edit Folder Name:</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Edit Folder Name"
+            value={editFolderName}
+            onChangeText={(text) => setEditFolderName(text)}
+          />
+          <Pressable style={styles.modalButton} onPress={() => setEditFolderModalVisible(false)}>
+            <Text style={styles.modalButtonText} onPress={handleEditFolderSave}>Save Folder</Text>
+          </Pressable>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // ... (existing styles)
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   postButton: {
     backgroundColor: '#004AAD',
-    padding: 12,
+    padding: 10, 
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    color: 'white',
   },
-  toggleButton: {
-    backgroundColor: '#004AAD',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  toggleButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  searchInput: {
-    
-  },//
-  scrollView: {
+  container: {
     flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-  },//
-    container: {
     backgroundColor: '#fff',
-    flex: 1,
   },
   content: {
     padding: 16,
-    marginTop: 30,
+    marginTop: 50,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#004AAD',
     marginBottom: 16,
+    textAlign: 'center',
   },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16
-  },
-  input: {
-    flex: 1,
-    height: 56,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginRight: 16,
-    backgroundColor: '#fff',
-  },
-  searchInput: {
-    borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 10,
-    padding: 10,
-    margin: 10,
-  },
-  addButton: {
+  createFolderButton: {
     backgroundColor: '#004AAD',
-    padding: 12, 
+    padding: 12,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
   },
-  addButtonText: {
+  createFolderButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
@@ -298,27 +323,66 @@ const styles = StyleSheet.create({
     marginRight: 0,
   },
   taskButtons: {
-    // flexDirection: 'row',
-    // marginLeft: 12,
-    flexDirection: "row",
+    flexDirection: 'row',
     marginLeft: 80,
     marginTop: 40,
   },
-  editButton: {
-    color: '#009900',
-    fontWeight: 'bold',
+    timestampText: {
     fontSize: 16,
-    marginRight: 12,
+    color: '#777',
+    marginBottom: 8,
   },
-  deleteButton: {
-    color: '#990000',
-    fontWeight: 'bold',
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
     fontSize: 16,
   },
-  searchHeader: {
+  input: {
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 10,
+    width: '80%',
+  },
+  modalButton: {
+    backgroundColor: '#004AAD',
+    borderRadius: 8,
+    padding: 10,
+    elevation: 2,
+    marginBottom: 10,
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  folder: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    marginTop: 16,
+    },
+  folderName: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 16,
     marginBottom: 8,
   },
 });
