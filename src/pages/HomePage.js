@@ -7,15 +7,18 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-} from 'react-native'
+} from 'react-native';
 import { IconButton } from 'react-native-paper';
-// import { IconButton } from 'react-native-paper';
 
 const HomePage = () => {
   const [tasks, setTasks] = useState([]);
   const [text, setText] = useState('');
   const [editIndex, setEditIndex] = useState(-1);
   const [visibleIndex, setVisibleIndex] = useState(null);
+
+  const [searchText, setSearchText] = useState('');
+  const [isTaskInputVisible, setTaskInputVisible] = useState(true);
+
 
   const addTask = () => {
     if (text) {
@@ -51,6 +54,57 @@ const HomePage = () => {
     setVisibleIndex(index === visibleIndex ? null : index);
   };
 
+  const renderNotes = () => {
+    const filteredNotes = tasks.filter(
+      (task) =>
+        task.text?.toLowerCase().includes(searchText.toLowerCase())
+    );
+
+    const exactMatch = [];
+    const partialMatch = [];
+
+    filteredNotes.forEach((task) => {
+      if (task.text?.toLowerCase() === searchText.toLowerCase()) {
+        exactMatch.push(task);
+      } else {
+        partialMatch.push(task);
+      }
+    });
+
+    if (exactMatch.length > 0 || partialMatch.length > 0) {
+      return (
+        <View>
+          {exactMatch.length > 0 && (
+            <>
+              <Text style={styles.searchHeader}>Matching Result:</Text>
+              <FlatList
+                data={exactMatch}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => index.toString()}
+              />
+            </>
+          )}
+          {partialMatch.length > 0 && (
+            <>
+              <Text style={styles.searchHeader}>Results:</Text>
+              <FlatList
+                data={partialMatch}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => index.toString()}
+              />
+            </>
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <View>
+        <Text>No matching tasks found.</Text>
+      </View>
+    );
+  };
+
   const renderItem = ({ item, index }) => (
     <View style={styles.task}>
       <Text style={styles.timestampText}>{item.timestamp}</Text>
@@ -59,9 +113,8 @@ const HomePage = () => {
         {visibleIndex === index && (
           <View style={styles.taskButtons}>
             <TouchableOpacity onPress={() => editTask(index)}>
-            <IconButton
+              <IconButton
                 icon="playlist-edit"
-                // iconColor={MD3Colors.error50}
                 size={20}
                 onPress={() => editTask(index)}
               />
@@ -69,10 +122,9 @@ const HomePage = () => {
             <TouchableOpacity onPress={() => deleteTask(index)}>
               <IconButton
                 icon="delete"
-                // iconColor={MD3Colors.error50}
                 size={20}
                 onPress={() => deleteTask(index)}
-              /> 
+              />
             </TouchableOpacity>
           </View>
         )}
@@ -85,40 +137,99 @@ const HomePage = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Good day!</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Write your day here..."
-            value={text}
-            onChangeText={(inputText) => setText(inputText)}
-          />
-
-          <TouchableOpacity onPress={addTask} style={styles.addButton}>
-            <Text style={styles.addButtonText}>
-              {editIndex !== -1 ? 'Edit Day' : 'Post Day'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={tasks}
-          renderItem={renderItem}
-          keyExtractor={(item, index) => index.toString()}
-        />
-      </View>
+      <FlatList
+        data={[{}]} // Add a dummy item to make FlatList work as a ScrollView
+        renderItem={() => (
+          <View style={styles.content}>
+            <Text style={styles.title}>Good day!</Text>
+            <View style={styles.inputContainer}>
+              {isTaskInputVisible ? (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Write your day here..."
+                    value={text}
+                    onChangeText={(inputText) => setText(inputText)}
+                  />
+                  <TouchableOpacity
+                    onPress={addTask}
+                    style={styles.postButton}
+                  >
+                    <Text style={styles.toggleButtonText}>
+                      {editIndex !== -1 ? 'Modify' : 'Share'}
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Search tasks..."
+                  value={searchText}
+                  onChangeText={(search) => setSearchText(search)}
+                />
+              )}
+              <TouchableOpacity
+                onPress={() => setTaskInputVisible(!isTaskInputVisible)}
+                style={styles.toggleButton}
+              >
+                <Text style={styles.toggleButtonText}>
+                  {isTaskInputVisible ? 'Search' : 'Memo'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {renderNotes()}
+          </View>
+        )}
+        keyExtractor={(item, index) => index.toString()}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  // ... (existing styles)
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  postButton: {
+    backgroundColor: '#004AAD',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  toggleButton: {
+    backgroundColor: '#004AAD',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
+  },
+  toggleButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  searchInput: {
+    
+  },//
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },//
+    container: {
     backgroundColor: '#fff',
     flex: 1,
   },
   content: {
     padding: 16,
-    marginTop: 50,
+    marginTop: 30,
   },
   title: {
     fontSize: 24,
@@ -140,6 +251,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginRight: 16,
     backgroundColor: '#fff',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 10,
+    padding: 10,
+    margin: 10,
   },
   addButton: {
     backgroundColor: '#004AAD',
@@ -197,8 +315,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-  
+  searchHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
 });
 
 export default HomePage;
+
+
 
