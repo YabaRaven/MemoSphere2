@@ -4,10 +4,10 @@
     "slug": "MemoSphere2",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/memo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./src/memo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
